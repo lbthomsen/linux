@@ -17,7 +17,7 @@ config LCD_LINUX
 
 config LCD_HD44780
 	tristate "HD44780 controller"
-	depends on LCD_LINUX
+	depends on LCD_LINUX && PARPORT
 	default n
 	help
 	  This is a LCD-Linux driver for LCD displays based on the

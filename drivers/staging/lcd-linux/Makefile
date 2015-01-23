@@ -3,6 +3,7 @@
 # Standard Makefile to statically compile LCD-Linux into the kernel
 # Linux 2.6
 
-obj-$(CONFIG_LCD_LINUX)		+= lcd-linux.o
-obj-$(CONFIG_LCD_HD44780)	+= hd44780.o
+ccflags-y += -I$(srctree)/drivers/staging/lcd-linux/include
 
+obj-$(CONFIG_LCD_LINUX)		+= lcd-linux.o
+obj-$(CONFIG_LCD_HD44780)	+= hd44780/

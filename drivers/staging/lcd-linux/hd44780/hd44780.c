@@ -48,7 +48,8 @@
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 #ifdef CONFIG_PROC_FS
-#define USE_PROC
+/*#define USE_PROC*/
+#undef USE_PROC
 #else
 #undef USE_PROC
 #endif
@@ -92,7 +93,6 @@
 
 #include "charmap.h"
 #include "commands.h"
-#include "compat.h"
 #include "config.h"
 #include "hardware.h"
 
