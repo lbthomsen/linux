@@ -1,5 +1,4 @@
 menu "LCD support"
-	depends on EXPERIMENTAL
 
 config LCD_LINUX
 	tristate "LCD-Linux layer"
