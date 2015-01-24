@@ -18,44 +18,20 @@
 
 #include <linux/version.h>
 
-#ifndef KERNEL_VERSION
-#define KERNEL_VERSION(a, b, c) (((a) << 16) + ((b) << 8) + (c))
-#endif
-
-#ifndef LINUX_VERSION_CODE
-#error - LINUX_VERSION_CODE undefined in 'linux/version.h'
-#endif
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 33)
-#include <generated/autoconf.h>
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0)
-#include <linux/autoconf.h>
-#else
-#include <linux/config.h>
-#endif
-
 #if defined(MODULE) && defined(CONFIG_PARPORT_MODULE) || defined(CONFIG_PARPORT)
 #define USE_PARPORT
 #else
 #undef USE_PARPORT
 #endif
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 #ifdef CONFIG_PROC_FS
 /*#define USE_PROC*/
 #undef USE_PROC
 #else
 #undef USE_PROC
 #endif
-#else  /* Linux_2.0_support */
-#undef USE_PROC  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 #include <linux/bitops.h>
-#else  /* Linux_2.0_support */
-#include <asm/bitops.h>  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -63,13 +39,8 @@
 #include <linux/delay.h>
 #include <linux/fs.h>
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 #include <asm/uaccess.h>
 #include <linux/init.h>
-#else  /* Linux_2.0_support */
-#include <asm/segment.h>  /* Linux_2.0_support */
-#include <linux/malloc.h>  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 
 #ifdef USE_PARPORT
 #include <linux/parport.h>
@@ -82,7 +53,6 @@
 #include <linux/proc_fs.h>
 #endif
 
-#define LCD_LINUX_MAIN
 #include <linux/hd44780.h>
 
 #include "charmap.h"
@@ -145,7 +115,7 @@ static inline unsigned long __get_br(unsigned long x, unsigned long start, unsig
 #define DISPLAY_ON	5	/* Display status: on or off */
 #define INC_ADDR	6	/* Increment address after data read/write */
 #define BACKLIGHT	7	/* Display backlight: on or off */
-#if defined(USE_PARPORT) && LINUX_VERSION_CODE >= KERNEL_VERSION(2, 4, 0)
+#if defined(USE_PARPORT)
 #define PP_REVERSE	8	/* Parport state: forward or reverse */
 #endif
 #define CGRAM_STATE	9	/* Controller status bitmask (bits 9->15): DDRAM or CGRAM access */
@@ -183,16 +153,9 @@ static struct lcd_parameters par = {
 };
 /* End of globals */
 
-#ifdef MODULE
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0)
 #include <linux/device.h>
 MODULE_ALIAS_CHARDEV(LCD_MAJOR, HD44780_MINOR);
-#endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 #include <linux/kmod.h>
-#else  /* Linux_2.0_support */
-#include <linux/kerneld.h>  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 
 static unsigned short flags	= DFLT_FLAGS;
 static unsigned short tabstop	= DFLT_TABSTOP;
@@ -203,13 +166,9 @@ static unsigned short vs_rows	= DFLT_VS_ROWS;
 static unsigned short vs_cols	= DFLT_VS_COLS;
 static unsigned short minor	= HD44780_MINOR;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 MODULE_DESCRIPTION("LCD parallel port driver for HD44780 compatible controllers.");
 MODULE_AUTHOR("Mattia Jona-Lasinio <mjona@users.sourceforge.net>");
-#ifdef MODULE_LICENSE
 MODULE_LICENSE("GPL");
-#endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0)
 module_param(io,	ushort, 0444);
 module_param(flags,	ushort, 0444);
 module_param(num_cntr,	ushort, 0444);
@@ -219,17 +178,6 @@ module_param(vs_rows,	ushort, 0444);
 module_param(vs_cols,	ushort, 0444);
 module_param(tabstop,	ushort, 0444);
 module_param(minor,	ushort, 0444);
-#else
-MODULE_PARM(io,		"h");
-MODULE_PARM(flags,	"h");
-MODULE_PARM(num_cntr,	"h");
-MODULE_PARM(cntr_rows,	"h");
-MODULE_PARM(cntr_cols,	"h");
-MODULE_PARM(vs_rows,	"h");
-MODULE_PARM(vs_cols,	"h");
-MODULE_PARM(tabstop,	"h");
-MODULE_PARM(minor,	"h");
-#endif
 MODULE_PARM_DESC(io,		"Parallel port base address (default: " string(DFLT_BASE) ")");
 MODULE_PARM_DESC(flags,		"Various flags (see Documentation)");
 MODULE_PARM_DESC(num_cntr,	"Number of controllers on the LCD (default: " string(DFLT_NUM_CNTR) ", max: " string(MAX_NUM_CNTR) ")");
@@ -239,53 +187,6 @@ MODULE_PARM_DESC(vs_rows,	"Number of rows of the virtual screen (default: " stri
 MODULE_PARM_DESC(vs_cols,	"Number of columns of the virtual screen (default: " string(DFLT_VS_COLS) ")");
 MODULE_PARM_DESC(tabstop,	"Tab character length (default: " string(DFLT_TABSTOP) ")");
 MODULE_PARM_DESC(minor,		"Assigned minor number (default: " string(HD44780_MINOR) ")");
-#endif  /* Linux_2.0_support */
-#else
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
-
-/*
- * Parse boot command line
- *
- * hd44780=cntr_rows,cntr_cols,vs_rows,vs_cols,flags,num_cntr,io,minor,tabstop
- */
-static int __init hd44780_boot_init(char *cmdline)
-{
-	char *str = cmdline;
-	int idx = 0;
-	unsigned short *args[] = {
-		&par.cntr_rows,
-		&par.cntr_cols,
-		&par.vs_rows,
-		&par.vs_cols,
-		&par.flags,
-		&par.num_cntr,
-		&io,
-		&par.minor,
-		&par.tabstop,
-	};
-
-	while (*cmdline && idx < (sizeof(args)/sizeof(unsigned short *))) {
-		switch (*str) {
-		case ',':
-			*str++ = 0;
-		case 0:
-			if (strlen(cmdline))
-				*args[idx] = simple_strtoul(cmdline, NULL, 0);
-			++idx;
-			cmdline = str;
-			break;
-		default:
-			++str;
-			break;
-		}
-	}
-
-	return (1);
-}
-
-__setup("hd44780=", hd44780_boot_init);
-#endif  /* Linux_2.0_support */
-#endif /* MODULE */
 
 /* Macros for iterator handling */
 static inline unsigned int iterator_inc_(unsigned int iterator, const unsigned int module)
@@ -355,7 +256,7 @@ static inline unsigned char __read_display(unsigned long bitmask)
 
 	set_lines(bitmask, &s);
 
-#if defined(USE_PARPORT) && LINUX_VERSION_CODE >= KERNEL_VERSION(2, 4, 0)
+#if defined(USE_PARPORT)
 	if (! test_bit(PP_REVERSE, &hd44780_flags)) {
 		parport_data_reverse(pd->port);
 		set_bit(PP_REVERSE, &hd44780_flags);
@@ -393,7 +294,7 @@ static inline void __write_display(unsigned char data, unsigned long bitmask)
 
 	set_lines(bitmask, &s);
 
-#if defined(USE_PARPORT) && LINUX_VERSION_CODE >= KERNEL_VERSION(2, 4, 0)
+#if defined(USE_PARPORT)
 	if (test_bit(PP_REVERSE, &hd44780_flags)) {
 		parport_data_forward(pd->port);
 		clear_bit(PP_REVERSE, &hd44780_flags);
@@ -894,27 +795,15 @@ static int hd44780_init_port(void)
 		return (-EAGAIN);
 	}
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 4, 0)
 	parport_data_forward(pd->port);
 	clear_bit(PP_REVERSE, &hd44780_flags);
-#endif
 	parport_write_control(pd->port, 0x0b);
 	parport_write_data(pd->port, 0x00);
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(2, 4, 0)
+#else
 	if (request_region(io, 3, HD44780_STRING) == NULL) {
 		printk(KERN_ERR "hd44780: request_region failed, io = %#x\n", io);
 		return (-EACCES);
 	}
-
-	outb(0x0b, io+2);
-	outb(0x00, io);
-#else
-	if (check_region(io, 3)) {
-		printk(KERN_ERR "hd44780: check_region failed, io = %#x\n", io);
-		return (-EACCES);
-	}
-
-	request_region(io, 3, HD44780_STRING);
 
 	outb(0x0b, io+2);
 	outb(0x00, io);
@@ -1044,21 +933,6 @@ static int hd44780_handle_custom_ioctl(unsigned int num, unsigned long arg, unsi
 }
 
 #ifdef USE_PROC
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 4, 0)
-/* create_proc_read_entry is missing in 2.2.x kernels */
-static struct proc_dir_entry *create_proc_read_entry(const char *name, mode_t mode,
-			struct proc_dir_entry *parent, read_proc_t *read_proc, void *data)
-{
-	struct proc_dir_entry *res = create_proc_entry(name, mode, parent);
-
-	if (res) {
-		res->read_proc = read_proc;
-		res->data = data;
-	}
-
-	return (res);
-}
-#endif
 
 static int hd44780_proc_status(char *buffer, char **start, off_t offset, int size, int *eof, void *data)
 {
@@ -1214,15 +1088,7 @@ static void remove_proc_entries(void)
 #endif
 
 /* Initialization */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 static int __init hd44780_init_module(void)
-#else  /* Linux_2.0_support */
-#ifdef MODULE  /* Linux_2.0_support */
-int init_module(void)  /* Linux_2.0_support */
-#else  /* Linux_2.0_support */
-int hd44780_init(void)  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 {
 	int ret;
 
@@ -1266,20 +1132,7 @@ int hd44780_init(void)  /* Linux_2.0_support */
 }
 
 /* Cleanup */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 4, 0)
 static void __exit hd44780_cleanup_module(void)
-#else
-/* __exit is not defined in 2.2.x kernels */
-static void hd44780_cleanup_module(void)
-#endif
-#else  /* Linux_2.0_support */
-#ifdef MODULE  /* Linux_2.0_support */
-void cleanup_module(void)  /* Linux_2.0_support */
-#else  /* Linux_2.0_support */
-void hd44780_cleanup(void)  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 {
 #ifdef USE_PROC
 	if (hd44780.driver_proc_root)
@@ -1289,7 +1142,5 @@ void hd44780_cleanup(void)  /* Linux_2.0_support */
 	lcd_unregister_driver(&hd44780, &par);
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 module_init(hd44780_init_module)
 module_exit(hd44780_cleanup_module)
-#endif  /* Linux_2.0_support */

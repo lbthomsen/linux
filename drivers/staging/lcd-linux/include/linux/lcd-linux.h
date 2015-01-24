@@ -20,18 +20,6 @@
 #ifndef LCD_LINUX_H
 #define LCD_LINUX_H
 
-#ifndef LCD_LINUX_MAIN
-#warning
-#warning LCD-Linux is still in development stage and
-#warning aims at speed and optimization. For these
-#warning reasons there is no guarantee of backward
-#warning compatibility between different LCD-Linux
-#warning versions. Be sure to use the lcd-linux.h
-#warning file of the same version as the module.
-#warning "http://lcd-linux.sourceforge.net/"
-#warning
-#endif
-
 #define LCD_LINUX_VERSION	"0.13.9-CVS"	/* Version number */
 #define LCD_LINUX_STRING	"lcd"
 
@@ -88,14 +76,6 @@ struct lcd_parameters {
 #include <linux/kernel.h>
 #include <linux/module.h>
 
-#ifndef KERNEL_VERSION  /* Linux_2.0_support */
-#define KERNEL_VERSION(a, b, c) (((a) << 16) + ((b) << 8) + (c))  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
-  /* Linux_2.0_support */
-#ifndef LINUX_VERSION_CODE  /* Linux_2.0_support */
-#error - LINUX_VERSION_CODE undefined.  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
-
 struct lcd_driver {
 	void	(*read_char)(unsigned int offset, unsigned short *data);
 	void	(*read_cgram_char)(unsigned char index, unsigned char *pixmap);
@@ -119,7 +99,6 @@ struct lcd_driver {
 	 */
 	unsigned char *cgram_buffer;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 	/* The root where the driver can create its own proc files.
 	 * Will be filled by the lcd-linux layer.
 	 */
@@ -129,25 +108,20 @@ struct lcd_driver {
 	 * just before registering the driver with lcd_register_driver.
 	 */
 	struct module *driver_module;
-#endif  /* Linux_2.0_support */
 };
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 #ifdef MODULE
 #define driver_module_init	THIS_MODULE
 #else
 #define driver_module_init	NULL
 #endif
-#endif  /* Linux_2.0_support */
 
 /* Always call lcd_driver_setup just before registering the driver
  * with lcd_register_driver.
  */
 static inline void lcd_driver_setup(struct lcd_driver *p)
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 	p->driver_module = driver_module_init;
-#endif  /* Linux_2.0_support */
 }
 
 /* External interface */
@@ -157,13 +131,8 @@ int lcd_unregister_driver(struct lcd_driver *drv, struct lcd_parameters *par);
 int lcd_open(unsigned short minor, struct lcd_struct **lcd);
 int lcd_close(struct lcd_struct **lcd);
 int lcd_ioctl(struct lcd_struct *lcd, unsigned int cmd, ...);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 ssize_t lcd_write(struct lcd_struct *lcd, const void *buffer, size_t length, loff_t offset, unsigned int with_attr);
 ssize_t lcd_read(struct lcd_struct *lcd, void *buffer, size_t length, loff_t offset, unsigned int with_attr);
-#else  /* Linux_2.0_support */
-int lcd_write(struct lcd_struct *lcd, const void *buffer, int length, loff_t offset, unsigned int with_attr);  /* Linux_2.0_support */
-int lcd_read(struct lcd_struct *lcd, void *buffer, int length, loff_t offset, unsigned int with_attr);  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 
 #endif /* __KERNEL__ */
 

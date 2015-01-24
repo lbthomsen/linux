@@ -17,44 +17,16 @@
 
 #include <linux/version.h>
 
-#ifndef KERNEL_VERSION
-#define KERNEL_VERSION(a, b, c) (((a) << 16) + ((b) << 8) + (c))
-#endif
-
-#ifndef LINUX_VERSION_CODE
-#error - LINUX_VERSION_CODE undefined in 'linux/version.h'
-#endif
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 33)
-#include <generated/autoconf.h>
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0)
-#include <linux/autoconf.h>
-#else
-#include <linux/config.h>
-#endif
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 #ifdef CONFIG_PROC_FS
 /*#define USE_PROC*/
 #undef USE_PROC
 #else
 #undef USE_PROC
 #endif
-#else  /* Linux_2.0_support */
-#undef USE_PROC  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 26)
 #include <linux/semaphore.h>
-#else
-#include <asm/semaphore.h>
-#endif
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 #include <linux/bitops.h>
-#else  /* Linux_2.0_support */
-#include <asm/bitops.h>  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -62,28 +34,18 @@
 
 #include <linux/fs.h>
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 #include <asm/uaccess.h>
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0)
 #include <linux/device.h>
-#endif
 #include <linux/init.h>
 #include <linux/list.h>
 #include <linux/slab.h>
 #include <linux/selection.h>
 #include <linux/vmalloc.h>
-#else  /* Linux_2.0_support */
-#include "list-compat.h"  /* Linux_2.0_support */
-#include <asm/segment.h>  /* Linux_2.0_support */
-#include <linux/malloc.h>  /* Linux_2.0_support */
-extern unsigned char color_table[];  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 
 #ifdef USE_PROC
 #include <linux/proc_fs.h>
 #endif
 
-#define LCD_LINUX_MAIN
 #include <linux/lcd-linux.h>
 
 static inline void __set_br(unsigned long *x, unsigned long val, unsigned long start, unsigned long len)
@@ -226,13 +188,8 @@ static int handle_esc(struct lcd_struct *, unsigned char);
 static void handle_input(struct lcd_struct *, unsigned short);
 
 /* Low level file operations */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 static ssize_t do_lcd_read(struct lcd_struct *, void *, size_t);
 static ssize_t do_lcd_write(struct lcd_struct *, const void *, size_t);
-#else  /* Linux_2.0_support */
-static int do_lcd_read(struct lcd_struct *, void *, int);  /* Linux_2.0_support */
-static int do_lcd_write(struct lcd_struct *, const void *, int);  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 static int do_lcd_open(struct lcd_struct *);
 static int do_lcd_release(struct lcd_struct *);
 static int do_lcd_ioctl(struct lcd_struct *, unsigned int, unsigned long);
@@ -248,53 +205,19 @@ static unsigned int major	= LCD_MAJOR;		/* Major number for LCD-Linux device */
 static unsigned short minors	= LCD_MINORS;		/* Minor numbers allocated for LCD-Linux */
 static LIST_HEAD(lcd_drivers);				/* Registered lcd drivers */
 static struct semaphore drivers_sem;			/* Locks the lcd_drivers list */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 13)
 static struct class *lcd_linux_class;
-#endif
 #ifdef USE_PROC
 static struct proc_dir_entry *lcd_proc_root;
 #endif
 /* End of globals */
 
-#ifdef MODULE
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0)
 #include <linux/device.h>
 MODULE_ALIAS_CHARDEV_MAJOR(LCD_MAJOR);
-#endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 MODULE_DESCRIPTION("Software layer to drive LCD displays under Linux.");
 MODULE_AUTHOR("Mattia Jona-Lasinio <mjona@users.sourceforge.net>");
-#ifdef MODULE_LICENSE
 MODULE_LICENSE("GPL");
-#endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0)
 module_param(minors, ushort, 0444);
-#else
-MODULE_PARM(minors, "h");
-#endif
 MODULE_PARM_DESC(minors, "Minor numbers allocated for LCD-Linux (default: " string(LCD_MINORS) ")");
-#endif  /* Linux_2.0_support */
-#else
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
-
-/*
- * Parse boot command line
- *
- * lcd=minors
- */
-static int __init lcd_linux_boot_init(char *cmdline)
-{
-	unsigned short args;
-
-	if ((args = simple_strtoul(cmdline, NULL, 0)))
-		minors = args;
-
-	return (1);
-}
-
-__setup("lcd=", lcd_linux_boot_init);
-#endif  /* Linux_2.0_support */
-#endif /* MODULE */
 
 /* Macros for iterator handling */
 static inline unsigned int iterator_inc_(unsigned int iterator, const unsigned int module)
@@ -1782,29 +1705,10 @@ static void read_cgram(struct lcd_struct *p, unsigned char index, unsigned char 
 		address_mode(p, -1);
 }
 
-
-
-
-
 /****************************
  * Proc filesystem routines *
  ****************************/
 #ifdef USE_PROC
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 4, 0)
-/* create_proc_read_entry is missing in 2.2.x kernels */
-static struct proc_dir_entry *create_proc_read_entry(const char *name, mode_t mode,
-			struct proc_dir_entry *parent, read_proc_t *read_proc, void *data)
-{
-	struct proc_dir_entry *res = create_proc_entry(name, mode, parent);
-
-	if (res) {
-		res->read_proc = read_proc;
-		res->data = data;
-	}
-
-	return (res);
-}
-#endif
 
 static int proc_fb_read(char *buffer, char **start, off_t offset, int size, int *eof, void *data)
 {
@@ -1975,17 +1879,10 @@ static void remove_driver_proc_entries(struct lcd_struct *p)
 #endif
 
 
-
-
-
 /*****************************
  * Low level file operations *
  *****************************/
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 static ssize_t do_lcd_read(struct lcd_struct *p, void *buffer, size_t length)
-#else  /* Linux_2.0_support */
-static int do_lcd_read(struct lcd_struct *p, void *buffer, int length)  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 {
 	unsigned int i;
 	unsigned short tmp;
@@ -2007,11 +1904,7 @@ static int do_lcd_read(struct lcd_struct *p, void *buffer, int length)  /* Linux
 	return (length);
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 static ssize_t do_lcd_write(struct lcd_struct *p, const void *buffer, size_t length)
-#else  /* Linux_2.0_support */
-static int do_lcd_write(struct lcd_struct *p, const void *buffer, int length)  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 {
 	unsigned int i;
 
@@ -2031,19 +1924,10 @@ static int do_lcd_write(struct lcd_struct *p, const void *buffer, int length)  /
 static int do_lcd_open(struct lcd_struct *p)
 {
 	if (! p->refcount) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 		if (p->driver->driver_module) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0)
 			if (! try_module_get(p->driver->driver_module))
 				return (-EBUSY);
-#else
-			if (__MOD_IN_USE(p->driver->driver_module))
-				return (-EBUSY);
-
-			__MOD_INC_USE_COUNT(p->driver->driver_module);
-#endif
 		}
-#endif  /* Linux_2.0_support */
 	}
 
 	++p->refcount;
@@ -2057,14 +1941,8 @@ static int do_lcd_release(struct lcd_struct *p)
 		return (0);
 
 	if (p->refcount == 1) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 		if (p->driver->driver_module)
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0)
 			module_put(p->driver->driver_module);
-#else
-			__MOD_DEC_USE_COUNT(p->driver->driver_module);
-#endif
-#endif  /* Linux_2.0_support */
 	}
 
 	--p->refcount;
@@ -2090,24 +1968,16 @@ static int cgram_ioctl(struct lcd_struct *p, unsigned int cmd, unsigned char *ar
 
 	if (cmd == LCDL_SET_CGRAM_CHAR) {
 		if (test_bit(USER_SPACE, &p->struct_flags)) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 			if (copy_from_user(cgbuf, buffer, length))
 				return (-EFAULT);
-#else  /* Linux_2.0_support */
-			memcpy_fromfs(cgbuf, buffer, length);  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 		} else
 			memcpy(cgbuf, buffer, length);
 		write_cgram(p, index, cgbuf);
 	} else {
 		read_cgram(p, index, cgbuf);
 		if (test_bit(USER_SPACE, &p->struct_flags)) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 			if (copy_to_user(buffer, cgbuf, length))
 				return (-EFAULT);
-#else  /* Linux_2.0_support */
-			memcpy_tofs(buffer, cgbuf, length);  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 		} else
 			memcpy(buffer, cgbuf, length);
 	}
@@ -2133,12 +2003,8 @@ static int do_lcd_ioctl(struct lcd_struct *p, unsigned int cmd, unsigned long ar
 			return (i);
 		i = par->minor;
 		if (test_bit(USER_SPACE, &p->struct_flags)) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 			if (copy_from_user(par, argp, sizeof(struct lcd_parameters)))
 				return (-EFAULT);
-#else  /* Linux_2.0_support */
-			memcpy_fromfs(par, argp, sizeof(struct lcd_parameters));  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 		} else
 			memcpy(par, argp, sizeof(struct lcd_parameters));
 		par->minor = i;
@@ -2148,12 +2014,8 @@ static int do_lcd_ioctl(struct lcd_struct *p, unsigned int cmd, unsigned long ar
 		if (argp == NULL)
 			return (-EFAULT);
 		if (test_bit(USER_SPACE, &p->struct_flags)) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 			if (copy_to_user(argp, par, sizeof(struct lcd_parameters)))
 				return (-EFAULT);
-#else  /* Linux_2.0_support */
-			memcpy_tofs(argp, par, sizeof(struct lcd_parameters));  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 		} else
 			memcpy(argp, par, sizeof(struct lcd_parameters));
 		return (0);
@@ -2167,13 +2029,8 @@ static int do_lcd_ioctl(struct lcd_struct *p, unsigned int cmd, unsigned long ar
 		if (argp == NULL)
 			return (-EFAULT);
 		if (test_bit(USER_SPACE, &p->struct_flags)) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 			get_user(i, argp);
 			get_user(driver->charmap[i], argp+1);
-#else  /* Linux_2.0_support */
-			i = get_user(argp);  /* Linux_2.0_support */
-			driver->charmap[i] = get_user(argp+1);  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 		} else {
 			i = argp[0];
 			driver->charmap[i] = argp[1];
@@ -2235,12 +2092,8 @@ static int do_lcd_ioctl(struct lcd_struct *p, unsigned int cmd, unsigned long ar
 		if (argp == NULL)
 			return (-EFAULT);
 		if (test_bit(USER_SPACE, &p->struct_flags)) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 			if (copy_from_user(driver->charmap, argp, 256))
 				return (-EFAULT);
-#else  /* Linux_2.0_support */
-			memcpy_fromfs(driver->charmap, argp, 256);  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 		} else
 			memcpy(driver->charmap, argp, 256);
 		return (0);
@@ -2249,12 +2102,8 @@ static int do_lcd_ioctl(struct lcd_struct *p, unsigned int cmd, unsigned long ar
 		if (argp == NULL)
 			return (-EFAULT);
 		if (test_bit(USER_SPACE, &p->struct_flags)) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 			if (copy_to_user(argp, driver->charmap, 256))
 				return (-EFAULT);
-#else  /* Linux_2.0_support */
-			memcpy_tofs(argp, driver->charmap, 256);  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 		} else
 			memcpy(argp, driver->charmap, 256);
 		return (0);
@@ -2267,12 +2116,8 @@ static int do_lcd_ioctl(struct lcd_struct *p, unsigned int cmd, unsigned long ar
 		if (argp == NULL)
 			return (-EFAULT);
 		if (test_bit(USER_SPACE, &p->struct_flags)) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 			if (copy_from_user(buf, argp, sizeof(buf)))
 				return (-EFAULT);
-#else  /* Linux_2.0_support */
-			memcpy_fromfs(buf, argp, sizeof(buf));  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 		} else
 			memcpy(buf, argp, sizeof(buf));
 
@@ -2335,11 +2180,7 @@ int lcd_register_driver(struct lcd_driver *driver, struct lcd_parameters *par)
 {
 	int ret;
 	struct lcd_struct *p;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 19)
 	struct device *lcd_device;
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 13)
-	struct class_device *lcd_device;
-#endif
 
 	if (! driver || ! par || par->minor >= minors)
 		return (-EINVAL);
@@ -2370,22 +2211,12 @@ int lcd_register_driver(struct lcd_driver *driver, struct lcd_parameters *par)
 	set_bit(DECAWM, &p->struct_flags);
 	set_bit(INC_CURS_POS, &p->struct_flags);
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 13)
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)
 	lcd_device = device_create(lcd_linux_class, NULL, MKDEV(major, par->minor), NULL, "%s", par->name);
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 19)
-	lcd_device = device_create(lcd_linux_class, NULL, MKDEV(major, par->minor), "%s", par->name);
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 15)
-	lcd_device = class_device_create(lcd_linux_class, NULL, MKDEV(major, par->minor), NULL, "%s", par->name);
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 13)
-	lcd_device = class_device_create(lcd_linux_class, MKDEV(major, par->minor), NULL, "%s", par->name);
-#endif
 	if (IS_ERR(lcd_device)) {
 		kfree(p);
 		up(&drivers_sem);
 		return (PTR_ERR(lcd_device));
 	}
-#endif
 
 #ifdef USE_PROC
 	if (lcd_proc_root && (driver->driver_proc_root = proc_mkdir(par->name, lcd_proc_root)) == NULL)
@@ -2398,44 +2229,26 @@ int lcd_register_driver(struct lcd_driver *driver, struct lcd_parameters *par)
 			remove_proc_entry(p->par->name, lcd_proc_root);
 #endif
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 19)
 		device_destroy(lcd_linux_class, MKDEV(major, par->minor));
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 13)
-		class_device_destroy(lcd_linux_class, MKDEV(major, par->minor));
-#endif
 
 		kfree(p);
 		up(&drivers_sem);
 		return (ret);
 	}
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 30)
 	sema_init(&p->lcd_sem, 1);
-#else
-	init_MUTEX(&p->lcd_sem);
-#endif
-#else  /* Linux_2.0_support */
-	p->lcd_sem = MUTEX;  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 
 	list_add_sorted(&p->lcd_list);
 
 	up(&drivers_sem);
 
 #ifdef MODULE
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0)
 	try_module_get(THIS_MODULE);
-#else
-	MOD_INC_USE_COUNT;
-#endif
 #endif
 
 	return (0);
 }
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 EXPORT_SYMBOL(lcd_register_driver);
-#endif  /* Linux_2.0_support */
 
 /* Exported function */
 int lcd_unregister_driver(struct lcd_driver *driver, struct lcd_parameters *par)
@@ -2469,11 +2282,7 @@ int lcd_unregister_driver(struct lcd_driver *driver, struct lcd_parameters *par)
 		return (ret);
 	}
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 19)
 	device_destroy(lcd_linux_class, MKDEV(major, par->minor));
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 13)
-	class_device_destroy(lcd_linux_class, MKDEV(major, par->minor));
-#endif
 
 #ifdef USE_PROC
 	if (p->driver->driver_proc_root)
@@ -2486,21 +2295,12 @@ int lcd_unregister_driver(struct lcd_driver *driver, struct lcd_parameters *par)
 	up(&drivers_sem);
 
 #ifdef MODULE
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0)
 	module_put(THIS_MODULE);
-#else
-	MOD_DEC_USE_COUNT;
-#endif
 #endif
 
 	return (0);
 }
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 EXPORT_SYMBOL(lcd_unregister_driver);
-#endif  /* Linux_2.0_support */
-
-
-
 
 
 /************************
@@ -2529,9 +2329,7 @@ int lcd_open(unsigned short minor, struct lcd_struct **pp)
 
 	return (ret);
 }
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 EXPORT_SYMBOL(lcd_open);
-#endif  /* Linux_2.0_support */
 
 /* Exported function */
 int lcd_close(struct lcd_struct **pp)
@@ -2553,9 +2351,7 @@ int lcd_close(struct lcd_struct **pp)
 
 	return (ret);
 }
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 EXPORT_SYMBOL(lcd_close);
-#endif  /* Linux_2.0_support */
 
 static inline loff_t offset_to_row_col(struct lcd_struct *p, loff_t offset)
 {
@@ -2568,17 +2364,9 @@ static inline loff_t offset_to_row_col(struct lcd_struct *p, loff_t offset)
 }
 
 /* Exported function */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 ssize_t lcd_read(struct lcd_struct *p, void *bufp, size_t length, loff_t offset, unsigned int with_attr)
-#else  /* Linux_2.0_support */
-int lcd_read(struct lcd_struct *p, void *bufp, int length, loff_t offset, unsigned int with_attr)  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 	ssize_t ret = 0;
-#else  /* Linux_2.0_support */
-	int ret = 0;  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 
 	if (! p) {
 		printk(KERN_ERR "LCD: NULL pointer in lcd_read\n");
@@ -2603,22 +2391,12 @@ int lcd_read(struct lcd_struct *p, void *bufp, int length, loff_t offset, unsign
 
 	return (ret);
 }
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 EXPORT_SYMBOL(lcd_read);
-#endif  /* Linux_2.0_support */
 
 /* Exported function */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 ssize_t lcd_write(struct lcd_struct *p, const void *bufp, size_t length, loff_t offset, unsigned int with_attr)
-#else  /* Linux_2.0_support */
-int lcd_write(struct lcd_struct *p, const void *bufp, int length, loff_t offset, unsigned int with_attr)  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 	ssize_t ret;
-#else  /* Linux_2.0_support */
-	int ret;  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 
 	if (! p) {
 		printk(KERN_ERR "LCD: NULL pointer in lcd_write\n");
@@ -2640,9 +2418,7 @@ int lcd_write(struct lcd_struct *p, const void *bufp, int length, loff_t offset,
 
 	return (ret);
 }
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 EXPORT_SYMBOL(lcd_write);
-#endif  /* Linux_2.0_support */
 
 /* Exported function */
 int lcd_ioctl(struct lcd_struct *p, unsigned int cmd, ...)
@@ -2665,35 +2441,12 @@ int lcd_ioctl(struct lcd_struct *p, unsigned int cmd, ...)
 
 	return (ret);
 }
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 EXPORT_SYMBOL(lcd_ioctl);
-#endif  /* Linux_2.0_support */
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
-static struct symbol_table lcd_linux_syms = {  /* Linux_2.0_support */
-#include <linux/symtab_begin.h>  /* Linux_2.0_support */
-	X(lcd_register_driver),  /* Linux_2.0_support */
-	X(lcd_unregister_driver),  /* Linux_2.0_support */
-	X(lcd_open),  /* Linux_2.0_support */
-	X(lcd_close),  /* Linux_2.0_support */
-	X(lcd_read),  /* Linux_2.0_support */
-	X(lcd_write),  /* Linux_2.0_support */
-	X(lcd_ioctl),  /* Linux_2.0_support */
-#include <linux/symtab_end.h>  /* Linux_2.0_support */
-};  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
-
-
-
 
 /*******************
  * File operations *
  *******************/
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 static loff_t lcd_fops_llseek(struct file *filp, loff_t offset, int orig)
-#else  /* Linux_2.0_support */
-static int lcd_fops_lseek(struct inode *inop, struct file *filp, off_t offset, int orig)  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 {
 	struct lcd_struct *p;
 
@@ -2725,18 +2478,9 @@ static int lcd_fops_lseek(struct inode *inop, struct file *filp, off_t offset, i
 	return (offset);
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 static ssize_t lcd_fops_read(struct file *filp, char *buffer, size_t length, loff_t *offp)
-#else  /* Linux_2.0_support */
-static int lcd_fops_read(struct inode *inop, struct file *filp, char *buffer, int length)  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 	ssize_t ret = 0;
-#else  /* Linux_2.0_support */
-	int i, ret = 0;  /* Linux_2.0_support */
-	loff_t *offp = &filp->f_pos;  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 	char *bufp = buffer;
 	struct lcd_struct *p;
 
@@ -2767,14 +2511,10 @@ static int lcd_fops_read(struct inode *inop, struct file *filp, char *buffer, in
 		if (test_bit(WITH_ATTR, &p->struct_flags))
 			ret *= sizeof(unsigned short);
 		*offp = (p->row*p->par->vs_cols)+p->col;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 		if (copy_to_user(bufp, p->flip_buf, ret)) {
 			ret = -EFAULT;
 			break;
 		}
-#else  /* Linux_2.0_support */
-		memcpy_tofs(bufp, p->flip_buf, ret);  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 		length -= ret;
 		bufp += ret;
 		ret = bufp-buffer;
@@ -2787,18 +2527,9 @@ static int lcd_fops_read(struct inode *inop, struct file *filp, char *buffer, in
 	return (ret);
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 static ssize_t lcd_fops_write(struct file *filp, const char *buffer, size_t length, loff_t *offp)
-#else  /* Linux_2.0_support */
-static int lcd_fops_write(struct inode *inop, struct file *filp, const char *buffer, int length)  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 	ssize_t ret = 0;
-#else  /* Linux_2.0_support */
-	int i, ret = 0;  /* Linux_2.0_support */
-	loff_t *offp = &filp->f_pos;  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 	const char *bufp = buffer;
 	struct lcd_struct *p;
 
@@ -2819,14 +2550,10 @@ static int lcd_fops_write(struct inode *inop, struct file *filp, const char *buf
 
 	while (length) {
 		ret = (length > FLIP_BUF_SIZE ? FLIP_BUF_SIZE : length);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 		if (copy_from_user(p->flip_buf, bufp, ret)) {
 			ret = -EFAULT;
 			break;
 		}
-#else  /* Linux_2.0_support */
-		memcpy_fromfs(p->flip_buf, bufp, ret);  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 		if (test_bit(WITH_ATTR, &p->struct_flags))
 			ret /= sizeof(unsigned short);
 		if ((ret = do_lcd_write(p, p->flip_buf, ret)) < 0)
@@ -2869,21 +2596,13 @@ static int lcd_fops_open(struct inode *inop, struct file *filp)
 	return (ret);
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 static int lcd_fops_release(struct inode *inop, struct file *filp)
-#else  /* Linux_2.0_support */
-static void lcd_fops_release(struct inode *inop, struct file *filp)  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 {
 	struct lcd_struct *p;
 	int ret;
 
 	if (! (p = filp->private_data))
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 		return (-ENODEV);
-#else  /* Linux_2.0_support */
-		return;  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 
 	down(&p->lcd_sem);
 
@@ -2892,16 +2611,10 @@ static void lcd_fops_release(struct inode *inop, struct file *filp)  /* Linux_2.
 
 	up(&p->lcd_sem);
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 	return (ret);
-#endif  /* Linux_2.0_support */
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 30)
 static long lcd_fops_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
-#else
-static int lcd_fops_ioctl(struct inode *inop, struct file *filp, unsigned int cmd, unsigned long arg)
-#endif
 {
 	struct lcd_struct *p;
 	int ret;
@@ -2921,28 +2634,13 @@ static int lcd_fops_ioctl(struct inode *inop, struct file *filp, unsigned int cm
 }
 
 static struct file_operations lcd_linux_fops = {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 4, 0)
-	.owner		= THIS_MODULE,
-#endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 	.llseek		= lcd_fops_llseek,
-#else  /* Linux_2.0_support */
-	.lseek		= lcd_fops_lseek,  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 	.read		= lcd_fops_read,
 	.write		= lcd_fops_write,
 	.open		= lcd_fops_open,
 	.release	= lcd_fops_release,
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 30)
 	.unlocked_ioctl = lcd_fops_ioctl,
-#else
-	.ioctl		= lcd_fops_ioctl,
-#endif
 };
-
-
-
-
 
 /********************************
  * Init/Cleanup driver routines *
@@ -3106,37 +2804,17 @@ static int cleanup_driver(struct lcd_struct *p)
 	return (ret);
 }
 
-
-
-
-
 /********************************
  * Init/Cleanup module routines *
  ********************************/
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 static int __init lcd_linux_init_module(void)
-#else  /* Linux_2.0_support */
-#ifdef MODULE  /* Linux_2.0_support */
-int init_module(void)  /* Linux_2.0_support */
-#else  /* Linux_2.0_support */
-int lcd_linux_init(void)  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 {
 	int ret;
 
 	if (! minors || minors > 256)
 		minors = LCD_MINORS;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 30)
 	sema_init(&drivers_sem, 1);
-#else
-	init_MUTEX(&drivers_sem);
-#endif
-#else  /* Linux_2.0_support */
-	drivers_sem = MUTEX;  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 
 	if ((ret = register_chrdev(major, LCD_LINUX_STRING, &lcd_linux_fops)) < 0) {
 		printk(KERN_ERR "LCD: register_chrdev failed\n");
@@ -3145,20 +2823,14 @@ int lcd_linux_init(void)  /* Linux_2.0_support */
 	if (major == 0)
 		major = ret;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 13)
 	if (IS_ERR((lcd_linux_class = class_create(THIS_MODULE, "lcd")))) {
 		ret = PTR_ERR(lcd_linux_class);
 		unregister_chrdev(major, LCD_LINUX_STRING);
 		return (ret);
 	}
-#endif
 
 #ifdef USE_PROC
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 26)
 	if ((lcd_proc_root = proc_mkdir("lcd", NULL)) == NULL)
-#else
-	if ((lcd_proc_root = proc_mkdir("lcd", &proc_root)) == NULL)
-#endif
 		printk(KERN_ERR "LCD: cannot create /proc/lcd/\n");
 	else if (create_proc_read_entry("drivers", 0, lcd_proc_root, proc_registered_drivers, NULL) == NULL)
 		printk(KERN_ERR "LCD: cannot create /proc/lcd/drivers\n");
@@ -3167,52 +2839,22 @@ int lcd_linux_init(void)  /* Linux_2.0_support */
 	printk(KERN_INFO "LCD: --> LCD-Linux " LCD_LINUX_VERSION " <--\n");
 	printk(KERN_INFO "LCD: --> Mattia Jona-Lasinio <mjona@users.sourceforge.net> <--\n" );
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
-	register_symtab(&lcd_linux_syms);  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
-
 	return (0);
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 4, 0)
 static void __exit lcd_linux_cleanup_module(void)
-#else
-/* __exit is not defined in 2.2.x kernels */
-static void lcd_linux_cleanup_module(void)
-#endif
-#else  /* Linux_2.0_support */
-#ifdef MODULE  /* Linux_2.0_support */
-void cleanup_module(void)  /* Linux_2.0_support */
-#else  /* Linux_2.0_support */
-void lcd_linux_cleanup(void)  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 {
 #ifdef USE_PROC
 	if (lcd_proc_root) {
 		remove_proc_entry("drivers", lcd_proc_root);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 26)
 		remove_proc_entry("lcd", NULL);
-#else
-		remove_proc_entry("lcd", &proc_root);
-#endif
 	}
 #endif
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 13)
 	class_destroy(lcd_linux_class);
-#endif
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 23)
 	unregister_chrdev(major, LCD_LINUX_STRING);
-#else
-	if (unregister_chrdev(major, LCD_LINUX_STRING))
-		printk(KERN_ERR "LCD: unregister_chrdev failed\n");
-#endif
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 module_init(lcd_linux_init_module)
 module_exit(lcd_linux_cleanup_module)
-#endif  /* Linux_2.0_support */

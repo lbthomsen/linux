@@ -18,22 +18,10 @@
 #include <linux/version.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 0)
-#include <linux/types.h>
-#include <linux/kdev_t.h>
-#include <linux/tty.h>
-#include <linux/console_struct.h>
-#endif
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 #include <linux/init.h>
-#endif  /* Linux_2.0_support */
-
 #include <linux/console.h>
 #include <linux/vt_kern.h>
 
-#define LCD_LINUX_MAIN
 #include <linux/hd44780.h>
 
 /* the display */
@@ -45,56 +33,13 @@ static int lcdl_last_vc = 15;
 static int lcdl_rows, lcdl_cols;
 static struct vc_data *lcd_linux_display_fg;
 
-#ifdef MODULE
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 #include <linux/kmod.h>
-#else  /* Linux_2.0_support */
-#include <linux/kerneld.h>  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 MODULE_DESCRIPTION("Kernel console driver based on LCD-Linux hd44780 displays");
 MODULE_AUTHOR("Mattia Jona-Lasinio <mjona@users.sourceforge.net>");
-#ifdef MODULE_LICENSE
 MODULE_LICENSE("GPL");
-#endif
-#endif  /* Linux_2.0_support */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0)
 module_param(lcdl_first_vc, int, 0444);
 module_param(lcdl_last_vc, int, 0444);
-#else
-MODULE_PARM(lcdl_first_vc, "i");
-MODULE_PARM(lcdl_last_vc, "i");
-#endif
-#else
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
-
-/*
- * Parse boot command line
- *
- * lcdcon=first,last
- */
-static int __init lcdcon_setup(char *str)
-{
-	int ints[3];
-
-	str = get_options(str, ARRAY_SIZE(ints), ints);
-
-	if (ints[0] < 2)
-		return (0);
-
-	if (ints[1] < 0 || ints[1] >= MAX_NR_CONSOLES || ints[2] < 0 || ints[2] >= MAX_NR_CONSOLES)
-		return (0);
-
-	lcdl_first_vc = ints[1];
-	lcdl_last_vc = ints[2];
-
-	return (1);
-}
-
-__setup("lcdcon=", lcdcon_setup);
-#endif  /* Linux_2.0_support */
-#endif
 
 static const char *lcdcon_startup(void)
 {
@@ -119,11 +64,7 @@ static void lcdcon_init(struct vc_data *conp, int init)
 		conp->vc_rows = lcdl_rows;
 		conp->vc_cols = lcdl_cols;
 	} else
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0)
 		vc_resize(conp, conp->vc_cols, conp->vc_rows);
-#else
-		vc_resize(conp->vc_rows, conp->vc_cols, lcdl_first_vc, lcdl_last_vc);
-#endif
 
 	if (lcd_linux_display_fg == NULL)
 		lcd_linux_display_fg = conp;
@@ -228,11 +169,7 @@ static int lcdcon_switch(struct vc_data *conp)
 	return (1);
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0)
 static int lcdcon_blank(struct vc_data *conp, int blank, int mode_switch)
-#else
-static int lcdcon_blank(struct vc_data *conp, int blank)
-#endif
 {
 	if (blank)
 		lcd_ioctl(lcd, LCDL_CLEAR_DISP);
@@ -256,9 +193,6 @@ static int lcdcon_set_origin(struct vc_data *conp)
 }
 
 static struct consw lcd_linux_con = {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0)
-	.owner			= THIS_MODULE,
-#endif
 	.con_startup		= lcdcon_startup,	/* Mandatory */
 	.con_init		= lcdcon_init,		/* Mandatory */
 	.con_deinit		= lcdcon_deinit,	/* Mandatory */
@@ -285,22 +219,13 @@ static struct consw lcd_linux_con = {
 //	.con_getxy		= lcdcon_getxy,		/* Optional */
 };
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 static int __init lcdcon_init_module(void)
-#else  /* Linux_2.0_support */
-#ifdef MODULE  /* Linux_2.0_support */
-int init_module(void)  /* Linux_2.0_support */
-#else  /* Linux_2.0_support */
-int lcdcon_init(void)  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 {
 	int ret = 0;
 
 	if (lcdl_first_vc > lcdl_last_vc)
 		return (1);
 
-#ifdef MODULE
 	if ((ret = request_module("hd44780"))) {
 		if (ret != -ENOSYS) {
 			printk(KERN_ERR "lcdcon: failure while loading module hd44780\n");
@@ -310,36 +235,16 @@ int lcdcon_init(void)  /* Linux_2.0_support */
 		printk(KERN_ERR "lcdcon: remember to load both the lcd-linux and hd44780 modules\n");
 		printk(KERN_ERR "lcdcon: before loading the lcdcon module\n");
 	}
-#endif
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0)
 	ret = take_over_console(&lcd_linux_con, lcdl_first_vc, lcdl_last_vc, 0);
-#else
-	take_over_console(&lcd_linux_con, lcdl_first_vc, lcdl_last_vc, 0);
-#endif
 
 	return (ret);
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 4, 0)
 static void __exit lcdcon_exit_module(void)
-#else
-/* __exit is not defined in 2.2.x kernels */
-static void lcdcon_exit_module(void)
-#endif
-#else  /* Linux_2.0_support */
-#ifdef MODULE  /* Linux_2.0_support */
-void cleanup_module(void)  /* Linux_2.0_support */
-#else  /* Linux_2.0_support */
-void lcdcon_exit(void)  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
-#endif  /* Linux_2.0_support */
 {
 	give_up_console(&lcd_linux_con);
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 2, 0)  /* Linux_2.0_support */
 module_init(lcdcon_init_module)
 module_exit(lcdcon_exit_module)
-#endif  /* Linux_2.0_support */
