@@ -18,12 +18,6 @@
 
 #include <linux/version.h>
 
-#if defined(MODULE) && defined(CONFIG_PARPORT_MODULE) || defined(CONFIG_PARPORT)
-#define USE_PARPORT
-#else
-#undef USE_PARPORT
-#endif
-
 #ifdef CONFIG_PROC_FS
 /*#define USE_PROC*/
 #undef USE_PROC
@@ -42,12 +36,7 @@
 #include <asm/uaccess.h>
 #include <linux/init.h>
 
-#ifdef USE_PARPORT
 #include <linux/parport.h>
-#else
-#include <asm/io.h>
-#include <linux/ioport.h>
-#endif
 
 #ifdef USE_PROC
 #include <linux/proc_fs.h>
@@ -115,9 +104,7 @@ static inline unsigned long __get_br(unsigned long x, unsigned long start, unsig
 #define DISPLAY_ON	5	/* Display status: on or off */
 #define INC_ADDR	6	/* Increment address after data read/write */
 #define BACKLIGHT	7	/* Display backlight: on or off */
-#if defined(USE_PARPORT)
 #define PP_REVERSE	8	/* Parport state: forward or reverse */
-#endif
 #define CGRAM_STATE	9	/* Controller status bitmask (bits 9->15): DDRAM or CGRAM access */
 
 #define SET_ESC_STATE(x)	__set_br(&hd44780_flags, x, 16, 8)
@@ -133,9 +120,7 @@ static unsigned int disp_offset[MAX_NUM_CNTR];	/* Physical cursor position on th
 static unsigned long hd44780_flags;		/* Driver flags for internal use only */
 static unsigned long all;			/* Mask to send commands to all controllers */
 
-#ifdef USE_PARPORT
 static struct pardevice *pd;			/* Parallel port device */
-#endif
 
 static struct lcd_parameters par = {
 	.name		= HD44780_STRING,
@@ -256,31 +241,17 @@ static inline unsigned char __read_display(unsigned long bitmask)
 
 	set_lines(bitmask, &s);
 
-#if defined(USE_PARPORT)
 	if (! test_bit(PP_REVERSE, &hd44780_flags)) {
 		parport_data_reverse(pd->port);
 		set_bit(PP_REVERSE, &hd44780_flags);
 	}
-#else
-	set_bit(5, &s.cntr_on);
-	set_bit(5, &s.cntr_off);
-#endif
 
-#ifdef USE_PARPORT
 	parport_write_control(pd->port, s.cntr_off);
 	ndelay(T_AS);
 	parport_write_control(pd->port, s.cntr_on);
 	ndelay(T_EH);
 	byte = parport_read_data(pd->port);
 	parport_write_control(pd->port, s.cntr_off);
-#else
-	outb(s.cntr_off, io+2);
-	ndelay(T_AS);
-	outb(s.cntr_on, io+2);
-	ndelay(T_EH);
-	byte = inb(io);
-	outb(s.cntr_off, io+2);
-#endif
 
 	ndelay(T_EL);
 
@@ -294,17 +265,11 @@ static inline void __write_display(unsigned char data, unsigned long bitmask)
 
 	set_lines(bitmask, &s);
 
-#if defined(USE_PARPORT)
 	if (test_bit(PP_REVERSE, &hd44780_flags)) {
 		parport_data_forward(pd->port);
 		clear_bit(PP_REVERSE, &hd44780_flags);
 	}
-#else
-	clear_bit(5, &s.cntr_on);
-	clear_bit(5, &s.cntr_off);
-#endif
 
-#ifdef USE_PARPORT
 	parport_write_control(pd->port, s.cntr_off);
 	parport_write_data(pd->port, data);
 	ndelay(T_AS);
@@ -315,18 +280,6 @@ static inline void __write_display(unsigned char data, unsigned long bitmask)
 	parport_write_control(pd->port, s.cntr_off);
 	if (par.num_cntr > 3)
 		parport_write_data(pd->port, data);
-#else
-	outb(s.cntr_off, io+2);
-	outb(data, io);
-	ndelay(T_AS);
-	outb(s.cntr_on, io+2);
-	if (par.num_cntr > 3)
-		outb(s.data_on | data, io);
-	ndelay(T_EH);
-	outb(s.cntr_off, io+2);
-	if (par.num_cntr > 3)
-		outb(data, io);
-#endif
 
 	ndelay(T_EL);
 }
@@ -776,7 +729,6 @@ static int hd44780_cleanup_display(void)
 
 static int hd44780_init_port(void)
 {
-#ifdef USE_PARPORT
 	struct parport *pp;
 
 	if ((pp = parport_find_base(io)) == NULL) {
@@ -799,27 +751,14 @@ static int hd44780_init_port(void)
 	clear_bit(PP_REVERSE, &hd44780_flags);
 	parport_write_control(pd->port, 0x0b);
 	parport_write_data(pd->port, 0x00);
-#else
-	if (request_region(io, 3, HD44780_STRING) == NULL) {
-		printk(KERN_ERR "hd44780: request_region failed, io = %#x\n", io);
-		return (-EACCES);
-	}
-
-	outb(0x0b, io+2);
-	outb(0x00, io);
-#endif
 
 	return (0);
 }
 
 static int hd44780_cleanup_port(void)
 {
-#ifdef USE_PARPORT
 	parport_release(pd);
 	parport_unregister_device(pd);
-#else
-	release_region(io, 3);
-#endif
 
 	return (0);
 }
