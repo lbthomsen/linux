@@ -1,7 +1,5 @@
 /* lcdcon.c
  *
- * $Id: lcdcon.c,v 1.10 2010/07/17 19:08:24 mjona Exp $
- *
  * Console driver for hd44780 displays based on LCD-Linux.
  *
  * Copyright (C) 2007 - 2010 Mattia Jona-Lasinio (mjona@users.sourceforge.net)
@@ -14,10 +12,6 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  *
  */
 

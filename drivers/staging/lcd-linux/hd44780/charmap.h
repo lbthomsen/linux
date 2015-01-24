@@ -1,7 +1,5 @@
 /* charmap.h
  *
- * $Id: charmap.h,v 1.1.1.1 2005/08/23 13:30:14 mjona Exp $
- *
  * Character mapping for HD44780 devices by Mark Haemmerling <mail@markh.de>.
  *
  * Translates ISO 8859-1 to HD44780 charset.

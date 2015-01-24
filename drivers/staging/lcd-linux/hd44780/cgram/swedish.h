@@ -1,7 +1,5 @@
 /* swedish.h
  *
- * $Id: swedish.h,v 1.2 2006/12/12 16:04:03 mjona Exp $
- *
  * Swedish characters for lcdmod
  *
  * Thanks to Erik Zetterberg <mr.z@linux.se>

@@ -1,7 +1,5 @@
 /* lcd-linux.c
  *
- * $Id: lcd-linux.c,v 1.312 2011/08/17 19:39:37 mjona Exp $
- *
  * Software layer to drive LCD displays under Linux.
  *
  * Copyright (C) 2005 - 2010  Mattia Jona-Lasinio (mjona@users.sourceforge.net)
@@ -14,10 +12,6 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  *
  */
 

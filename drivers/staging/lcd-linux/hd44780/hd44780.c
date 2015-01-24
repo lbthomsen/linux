@@ -1,7 +1,5 @@
 /* hd44780.c
  *
- * $Id: hd44780.c,v 1.185 2011/01/02 13:59:45 mjona Exp $
- *
  * LCD-Linux:
  * Driver for HD44780 compatible displays connected to the parallel port.
  *
@@ -15,10 +13,6 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  *
  */
 
