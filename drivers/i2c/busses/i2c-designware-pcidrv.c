@@ -35,6 +35,8 @@
 #include <linux/slab.h>
 #include <linux/pci.h>
 #include <linux/pm_runtime.h>
+#include <linux/pmu/intel.h>
+
 #include "i2c-designware-core.h"
 
 #define DRIVER_NAME "i2c-designware-pci"
@@ -47,6 +49,7 @@ enum dw_pci_ctl_id_t {
 	medfield_4,
 	medfield_5,
 
+	merrifield,
 	baytrail,
 	haswell,
 };
@@ -67,6 +70,7 @@ struct dw_pci_controller {
 	u32 clk_khz;
 	u32 functionality;
 	struct dw_scl_sda_cfg *scl_sda_cfg;
+	bool pmu_required;
 };
 
 #define INTEL_MID_STD_CFG  (DW_IC_CON_MASTER |			\
@@ -78,6 +82,14 @@ struct dw_pci_controller {
 					I2C_FUNC_SMBUS_BYTE_DATA |	\
 					I2C_FUNC_SMBUS_WORD_DATA |	\
 					I2C_FUNC_SMBUS_I2C_BLOCK)
+
+/* Merrifield HCNT/LCNT/SDA hold time */
+static struct dw_scl_sda_cfg mrfl_config = {
+	.ss_hcnt = 0x2f8,
+	.fs_hcnt = 0x87,
+	.ss_lcnt = 0x37b,
+	.fs_lcnt = 0x10a,
+};
 
 /* BayTrail HCNT/LCNT/SDA hold time */
 static struct dw_scl_sda_cfg byt_config = {
@@ -139,6 +151,14 @@ static struct dw_pci_controller dw_pci_controllers[] = {
 		.tx_fifo_depth = 32,
 		.rx_fifo_depth = 32,
 		.clk_khz      = 25000,
+	},
+	[merrifield] = {
+		.bus_num = -1,
+		.bus_cfg = INTEL_MID_STD_CFG | DW_IC_CON_SPEED_FAST,
+		.tx_fifo_depth = 64,
+		.rx_fifo_depth = 64,
+		.scl_sda_cfg = &mrfl_config,
+		.pmu_required = true,
 	},
 	[baytrail] = {
 		.bus_num = -1,
@@ -204,6 +224,9 @@ static int i2c_dw_pci_probe(struct pci_dev *pdev,
 	}
 
 	controller = &dw_pci_controllers[id->driver_data];
+
+	if (controller->pmu_required && !intel_pmu_is_available())
+		return -EPROBE_DEFER;
 
 	r = pcim_enable_device(pdev);
 	if (r) {
@@ -305,6 +328,9 @@ static const struct pci_device_id i2_designware_pci_ids[] = {
 	{ PCI_VDEVICE(INTEL, 0x082C), medfield_0 },
 	{ PCI_VDEVICE(INTEL, 0x082D), medfield_1 },
 	{ PCI_VDEVICE(INTEL, 0x082E), medfield_2 },
+	/* Merrifield */
+	{ PCI_VDEVICE(INTEL, 0x1195), merrifield },
+	{ PCI_VDEVICE(INTEL, 0x1196), merrifield },
 	/* Baytrail */
 	{ PCI_VDEVICE(INTEL, 0x0F41), baytrail },
 	{ PCI_VDEVICE(INTEL, 0x0F42), baytrail },
