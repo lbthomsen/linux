@@ -206,14 +206,32 @@ static int pci_write(struct pci_bus *bus, unsigned int devfn, int where,
 			       where, size, value);
 }
 
+#define PCI_DEVICE_ID_INTEL_MRFL_MMC	0x1190
+
 static int intel_mid_pci_irq_enable(struct pci_dev *dev)
 {
 	struct irq_alloc_info info;
 	int polarity;
 	int ret;
 
-	if (dev->irq_managed && dev->irq > 0)
+	if (dev->irq_managed && dev->irq >= 0)
 		return 0;
+
+	/* Special treatment for IRQ0 */
+	if (dev->irq == 0) {
+		switch (intel_mid_identify_cpu()) {
+		case INTEL_MID_CPU_CHIP_TANGIER:
+			/*
+			 * TNG has IRQ0 assigned to eMMC controller. This makes
+			 * it happy to get an interrupt.
+			 */
+			if (dev->device != PCI_DEVICE_ID_INTEL_MRFL_MMC)
+				return -EBUSY;
+			break;
+		default:
+			break;
+		}
+	}
 
 	/* Set IRQ polarity */
 	if (intel_mid_identify_cpu() == INTEL_MID_CPU_CHIP_TANGIER)
